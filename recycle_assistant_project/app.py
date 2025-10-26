@@ -20,7 +20,7 @@ IMG_SIZE = (224, 224)
 CATEGORY_INFO = {
     "cardboard": {
         "name": "Karton",
-        "color": "#0077b6", # Mavi
+        "color": "#0077b6",
         "icon": "📦",
         "bin": "Mavi Kutu (Kağıt/Karton)",
         "recyclable": True,
@@ -29,7 +29,7 @@ CATEGORY_INFO = {
     },
     "glass": {
         "name": "Cam",
-        "color": "#2a9d8f", # Yeşilimsi Mavi
+        "color": "#2a9d8f",
         "icon": "🍾",
         "bin": "Yeşil Kutu (Cam)",
         "recyclable": True,
@@ -38,7 +38,7 @@ CATEGORY_INFO = {
     },
     "metal": {
         "name": "Metal",
-        "color": "#e9c46a", # Sarımsı
+        "color": "#e9c46a",
         "icon": "🥫",
         "bin": "Sarı Kutu (Metal/Plastik)",
         "recyclable": True,
@@ -47,7 +47,7 @@ CATEGORY_INFO = {
     },
     "paper": {
         "name": "Kağıt",
-        "color": "#f4a261", # Turuncu
+        "color": "#f4a261",
         "icon": "📰",
         "bin": "Mavi Kutu (Kağıt/Karton)",
         "recyclable": True,
@@ -56,7 +56,7 @@ CATEGORY_INFO = {
     },
     "plastic": {
         "name": "Plastik",
-        "color": "#e76f51", # Kırmızımsı
+        "color": "#e76f51",
         "icon": "🥤",
         "bin": "Sarı Kutu (Metal/Plastik)",
         "recyclable": True,
@@ -65,7 +65,7 @@ CATEGORY_INFO = {
     },
     "trash": {
         "name": "Diğer/Çöp",
-        "color": "#264653", # Koyu Mavi
+        "color": "#264653",
         "icon": "🗑️",
         "bin": "Siyah Kutu (Geri Dönüştürülemez)",
         "recyclable": False,
@@ -81,22 +81,16 @@ def download_assets():
     
     # Model Dosyasını İndir
     if not os.path.exists(MODEL_PATH):
-        st.info("Model dosyası bulunamadı. Google Drive'dan indiriliyor...")
         try:
             gdown.download(id=DRIVE_FILE_ID, output=MODEL_PATH, quiet=False, fuzzy=True)
-            st.success("Model başarıyla indirildi!")
         except Exception as e:
-            st.error(f"Model indirilirken hata oluştu: {e}")
             success = False
 
     # Sınıf İsimleri Dosyasını İndir
     if not os.path.exists(CLASS_NAMES_FILE):
-        st.info("Sınıf isimleri dosyası bulunamadı. Google Drive'dan indiriliyor...")
         try:
             gdown.download(id=CLASS_NAMES_DRIVE_ID, output=CLASS_NAMES_FILE, quiet=False, fuzzy=True)
-            st.success("Sınıf isimleri dosyası başarıyla indirildi!")
         except Exception as e:
-            st.error(f"Sınıf isimleri dosyası indirilirken hata oluştu: {e}")
             success = False
 
     return success
@@ -109,16 +103,21 @@ def load_assets():
     try:
         model = load_model(MODEL_PATH)
         with open(CLASS_NAMES_FILE, 'r') as f:
-            # Teachable Machine labels.txt dosyasında "0 cardboard" gibi format olduğu için
-            # sadece sınıf ismini alacak şekilde düzenliyoruz.
-            class_names = [line.strip().split(' ', 1)[1] for line in f.readlines() if line.strip()]
+            lines = f.readlines()
+            class_names = []
+            for line in lines:
+                line = line.strip()
+                if line:
+                    # Teachable Machine format: "0 cardboard" veya sadece "cardboard"
+                    parts = line.split(' ', 1)
+                    if len(parts) > 1:
+                        class_names.append(parts[1].lower())
+                    else:
+                        class_names.append(parts[0].lower())
         
-        # Teachable Machine'den gelen class_names listesi zaten doğru sıradadır.
         class_map = class_names
-        
         return model, class_map
     except Exception as e:
-        st.error(f"Varlıklar yüklenirken bir hata oluştu: {e}")
         return None, None
 
 def preprocess_image(img):
@@ -141,16 +140,51 @@ model, class_map = load_assets()
 st.markdown('''
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
-html, body, [class*="st-"] {
+* {
     font-family: 'Poppins', sans-serif;
 }
 .stApp {
     background: linear-gradient(135deg, #f0f2f6 0%, #e0e4eb 100%);
 }
-.st-emotion-cache-1cypcdb { 
-    color: #264653;
-    font-weight: 700;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+.main-container {
+    display: grid;
+    grid-template-columns: 1.2fr 1.2fr 1fr;
+    gap: 20px;
+    height: calc(100vh - 200px);
+    overflow: hidden;
+}
+.column {
+    overflow-y: auto;
+    padding: 20px;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.modal-button {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.modal-button-about {
+    background: linear-gradient(135deg, #2a9d8f 0%, #1e7a7a 100%);
+    color: white;
+}
+.modal-button-about:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(42, 157, 143, 0.3);
+}
+.modal-button-project {
+    background: linear-gradient(135deg, #e76f51 0%, #d45a3a 100%);
+    color: white;
+}
+.modal-button-project:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(231, 111, 81, 0.3);
 }
 .result-card {
     padding: 20px;
@@ -158,14 +192,11 @@ html, body, [class*="st-"] {
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
     margin-bottom: 20px;
     color: white;
-    transition: transform 0.3s ease-in-out;
-}
-.result-card:hover {
-    transform: translateY(-5px);
 }
 .result-card h3, .result-card h4 {
     color: white;
     font-weight: 600;
+    margin: 10px 0;
 }
 .stFileUploader {
     border: 3px dashed #2a9d8f;
@@ -173,15 +204,64 @@ html, body, [class*="st-"] {
     padding: 30px;
     background-color: rgba(255, 255, 255, 0.7);
 }
-.stButton>button {
-    background-color: #2a9d8f;
-    color: white;
-    border-radius: 10px;
-    padding: 10px 20px;
-    font-weight: 600;
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
 }
-.sidebar-button {
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 20px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+.modal-header {
+    font-size: 24px;
+    font-weight: 700;
+    color: #264653;
+    margin-bottom: 20px;
+    border-bottom: 3px solid #2a9d8f;
+    padding-bottom: 15px;
+}
+.modal-close-btn {
+    background: #e76f51;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    margin-top: 20px;
+}
+.stats-box {
+    background: linear-gradient(135deg, #f0f2f6 0%, #e0e4eb 100%);
+    padding: 15px;
+    border-radius: 10px;
     margin: 10px 0;
+    border-left: 4px solid #2a9d8f;
+}
+.stats-label {
+    font-size: 12px;
+    color: #666;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+.stats-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #264653;
+    margin-top: 5px;
 }
 </style>
 ''', unsafe_allow_html=True)
@@ -199,23 +279,72 @@ if 'analysis_count' not in st.session_state:
 
 # Başlık
 st.title("🌱 Akıllı Geri Dönüşüm Asistanı")
-st.markdown("Yüklediğiniz atık görselini analiz ederek hangi kategoriye ait olduğunu ve nasıl geri dönüştürüleceğini öğrenin.")
 
 # 3 Sütunlu Layout
-col_left, col_middle, col_right = st.columns([1.5, 1.5, 1.2])
+col_left, col_middle, col_right = st.columns([1.2, 1.2, 1], gap="medium")
 
-# --- SOL SÜTUN: Görüntü Yükleme ---
+# --- SOL SÜTUN: Görüntü Yükleme ve İstatistikler ---
 with col_left:
     st.subheader("📸 Fotoğraf Yükle")
     uploaded_file = st.file_uploader(
         "Fotoğraf Yükle (PNG, JPG)",
         type=["png", "jpg", "jpeg"],
-        help="Lütfen net ve tek bir atık içeren bir fotoğraf yükleyin."
+        help="Lütfen net ve tek bir atık içeren bir fotoğraf yükleyin.",
+        key="file_uploader"
     )
     
     if uploaded_file is not None:
         image_pil = Image.open(uploaded_file).convert('RGB')
         st.image(image_pil, caption='Yüklenen Fotoğraf', use_column_width=True)
+    
+    st.markdown("---")
+    st.subheader("📊 İstatistikler")
+    
+    col_stat1, col_stat2 = st.columns(2)
+    with col_stat1:
+        st.markdown(f"""
+        <div class="stats-box">
+            <div class="stats-label">Toplam Analiz</div>
+            <div class="stats-value">{st.session_state.analysis_count}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col_stat2:
+        st.markdown(f"""
+        <div class="stats-box">
+            <div class="stats-label">CO2 Tasarrufu</div>
+            <div class="stats-value">{st.session_state.total_co2_saved:.2f} kg</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown(f"""
+    <div class="stats-box">
+        <div class="stats-label">Son Tahmin</div>
+        <div class="stats-value">{st.session_state.last_prediction}</div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Kategori Dağılımı Grafiği
+    if st.session_state.analysis_count > 0:
+        st.markdown("**Kategori Dağılımı**")
+        plot_data = {
+            "Kategori": [CATEGORY_INFO[k]['name'] for k, v in st.session_state.prediction_counts.items() if v > 0],
+            "Sayı": [v for v in st.session_state.prediction_counts.values() if v > 0],
+            "Renk": [CATEGORY_INFO[k]['color'] for k, v in st.session_state.prediction_counts.items() if v > 0]
+        }
+        if plot_data["Kategori"]:
+            df = pd.DataFrame(plot_data)
+            fig = px.pie(
+                df, 
+                values='Sayı', 
+                names='Kategori', 
+                color='Kategori',
+                color_discrete_map={k: v for k, v in zip(df['Kategori'], df['Renk'])},
+                hole=.3
+            )
+            fig.update_traces(textposition='inside', textinfo='percent+label')
+            fig.update_layout(showlegend=False, margin=dict(t=0, b=0, l=0, r=0), height=250)
+            st.plotly_chart(fig, use_container_width=True)
 
 # --- ORTA SÜTUN: Analiz Sonuçları ---
 with col_middle:
@@ -224,7 +353,6 @@ with col_middle:
     if uploaded_file is not None and model is not None:
         try:
             image_pil = Image.open(uploaded_file).convert('RGB')
-            st.info("Analiz ediliyor...")
             img_array = preprocess_image(image_pil)
             predicted_class_key, confidence = predict_image(model, img_array, class_map)
             info = CATEGORY_INFO.get(predicted_class_key, CATEGORY_INFO['trash'])
@@ -253,41 +381,44 @@ with col_middle:
         except Exception as e:
             st.error(f"Analiz sırasında bir hata oluştu: {e}")
     else:
-        st.info("Lütfen sol taraftan bir fotoğraf yükleyin.")
+        st.info("📸 Lütfen sol taraftan bir fotoğraf yükleyin.")
 
-# --- SAĞ SÜTUN: Butonlar ve İstatistikler ---
+# --- SAĞ SÜTUN: Menü Butonları ---
 with col_right:
     st.subheader("⚙️ Menü")
     
     # Hakkımızda Butonu
-    if st.button("👤 Hakkımızda", use_container_width=True, key="about_btn"):
+    if st.button("👤 Hakkımızda", key="about_btn", use_container_width=True):
         if st.session_state.show_about_modal:
             st.session_state.show_about_modal = False
         else:
             st.session_state.show_about_modal = True
             st.session_state.show_project_modal = False
-    
-    st.markdown("")  # Boşluk
+        st.rerun()
     
     # Proje Hakkında Butonu
-    if st.button("📊 Proje Hakkında", use_container_width=True, key="project_btn"):
+    if st.button("📊 Proje Hakkında", key="project_btn", use_container_width=True):
         if st.session_state.show_project_modal:
             st.session_state.show_project_modal = False
         else:
             st.session_state.show_project_modal = True
             st.session_state.show_about_modal = False
+        st.rerun()
 
 # --- MODAL İÇERİKLERİ ---
 
 # Hakkımızda Modal
 if st.session_state.show_about_modal:
-    st.markdown("---")
-    st.markdown("### 👤 Hakkımızda")
+    st.markdown("""
+    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1000;">
+        <div style="background: white; padding: 40px; border-radius: 20px; max-width: 600px; width: 90%; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
+    """, unsafe_allow_html=True)
     
-    # Profil Fotoğrafı
     col1, col2, col3 = st.columns([0.5, 1, 0.5])
     with col2:
         st.image("https://media.licdn.com/dms/image/v2/D4D03AQGVv9aJFngyfA/profile-displayphoto-crop_800_800/B4DZiTDBBMHsAI-/0/1754813700473?e=1762992000&v=beta&t=dHNPVRx59o4FH5GVoVZWgReb7R364ncx4lwhc32A6pM", width=150)
+    
+    st.markdown("### 👤 Hakkımızda")
     
     st.markdown("""
     **Alkım Can KALYONCU**
@@ -323,10 +454,20 @@ if st.session_state.show_about_modal:
     
     Bugünlerde hedefi; hem matematikte hem teknolojide hem de hayatta gençlere "yapabilirsin" dedirtmek. Ve elbette, biraz da kendi hayatını baştan yazmak. ✨
     """)
+    
+    if st.button("Kapat", key="close_about"):
+        st.session_state.show_about_modal = False
+        st.rerun()
+    
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
 # Proje Hakkında Modal
 if st.session_state.show_project_modal:
-    st.markdown("---")
+    st.markdown("""
+    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1000;">
+        <div style="background: white; padding: 40px; border-radius: 20px; max-width: 600px; width: 90%; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
+    """, unsafe_allow_html=True)
+    
     st.markdown("### 📊 Proje Hakkında")
     
     st.markdown("""
@@ -345,48 +486,23 @@ if st.session_state.show_project_modal:
     - Google Drive (Veri Depolama)
     - Plotly (Grafikler)
     
-    **Proje Sunumu:** Detaylı bilgi ve analiz için sidebar'daki butonları kullanın.
+    **Veri Seti:**
+    - Kaggle 'Garbage Classification' (5,054 görsel)
+    - 6 Atık Kategorisi
+    
+    **Proje Hedefleri:**
+    - ♻️ Geri dönüşüm bilincini artırmak
+    - 🌍 Çevresel etki azaltmak
+    - 🤖 Yapay zeka teknolojisini yaygınlaştırmak
     """)
-
-# --- Sidebar ve İstatistikler ---
-st.sidebar.header("📊 Analiz İstatistikleri")
-
-# Toplam Analiz ve CO2 Metrikleri
-st.sidebar.metric(label="Toplam Analiz Sayısı", value=st.session_state.analysis_count)
-st.sidebar.metric(label="Tahmini CO2 Tasarrufu", value=f"{st.session_state.total_co2_saved:.2f} kg", delta="Geri Dönüşüm Katkınız")
-st.sidebar.info(f"Son Tahmin: {st.session_state.last_prediction}")
-
-st.sidebar.markdown("---")
-
-# Plotly Pasta Grafiği
-if st.session_state.analysis_count > 0:
-    st.sidebar.subheader("Kategori Dağılımı")
-    plot_data = {
-        "Kategori": [CATEGORY_INFO[k]['name'] for k, v in st.session_state.prediction_counts.items() if v > 0],
-        "Sayı": [v for v in st.session_state.prediction_counts.values() if v > 0],
-        "Renk": [CATEGORY_INFO[k]['color'] for k, v in st.session_state.prediction_counts.items() if v > 0]
-    }
-    df = pd.DataFrame(plot_data)
-    fig = px.pie(
-        df, 
-        values='Sayı', 
-        names='Kategori', 
-        color='Kategori',
-        color_discrete_map={k: v for k, v in zip(df['Kategori'], df['Renk'])},
-        hole=.3
-    )
-    fig.update_traces(textposition='inside', textinfo='percent+label')
-    fig.update_layout(showlegend=False, margin=dict(t=0, b=0, l=0, r=0))
-    st.sidebar.plotly_chart(fig, use_container_width=True)
-
-st.sidebar.markdown("---")
-st.sidebar.caption("Bu uygulama, Kaggle 'Garbage Classification' veri seti kullanılarak eğitilmiş bir model ile güçlendirilmiştir.")
-
-# Modelin doğruluk oranını kullanıcıya bildiren not
-if model is not None:
-    st.success("✅ **Model Bilgisi:** Bu uygulama, Teachable Machine ile eğitilmiş ve **%85-90 doğruluk** elde eden bir model kullanmaktadır. Üretim ortamı için optimize edilmiştir.")
+    
+    if st.button("Kapat", key="close_project"):
+        st.session_state.show_project_modal = False
+        st.rerun()
+    
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
 # Footer
 st.markdown("---")
-st.markdown("Geliştirme aşaması: **İyileştirme ve Test**")
+st.markdown("✅ **Model Bilgisi:** Bu uygulama, Teachable Machine ile eğitilmiş ve **%85-90 doğruluk** elde eden bir model kullanmaktadır.")
 
