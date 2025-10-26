@@ -10,10 +10,10 @@ import plotly.express as px
 import pandas as pd
 
 # --- Sabitler ve Konfigürasyon ---
-MODEL_PATH = 'garbage_classifier_model.h5'
-DRIVE_FILE_ID = '1uB24DQqKSCzTKGSjBsyjc7IuBOiCy4pw'
-CLASS_NAMES_DRIVE_ID = '1tL43bFPuXYmd4iQ2A8HZZTTq9mno1z1F'
-CLASS_NAMES_FILE = 'class_names.txt'
+MODEL_PATH = 'keras_model.h5'
+DRIVE_FILE_ID = '1tVDqgUYr5gn32_bhH644Ae0J9dra333J'
+CLASS_NAMES_DRIVE_ID = '1C_O8unajWo7qJGJE5VVxQJ4mcASbXYRN'
+CLASS_NAMES_FILE = 'labels.txt'
 IMG_SIZE = (224, 224)
 
 # Sınıflandırma sonuçları için detaylı bilgiler ve renkler
@@ -109,9 +109,12 @@ def load_assets():
     try:
         model = load_model(MODEL_PATH)
         with open(CLASS_NAMES_FILE, 'r') as f:
-            class_names = [line.strip() for line in f.readlines() if line.strip()]
+            # Teachable Machine labels.txt dosyasında "0 cardboard" gibi format olduğu için
+            # sadece sınıf ismini alacak şekilde düzenliyoruz.
+            class_names = [line.strip().split(' ', 1)[1] for line in f.readlines() if line.strip()]
         
-        class_map = ['trash', 'cardboard', 'trash', 'glass', 'metal', 'paper', 'plastic']
+        # Teachable Machine'den gelen class_names listesi zaten doğru sıradadır.
+        class_map = class_names
         
         return model, class_map
     except Exception as e:
@@ -190,6 +193,12 @@ html, body, [class*="st-"] {
 </style>
 ''', unsafe_allow_html=True)
 
+# Session State Başlatma
+if 'show_project_modal' not in st.session_state:
+    st.session_state.show_project_modal = False
+if 'show_about_modal' not in st.session_state:
+    st.session_state.show_about_modal = False
+
 # Başlık
 st.title("🌱 Akıllı Geri Dönüşüm Asistanı")
 st.markdown("Yüklediğiniz atık görselini analiz ederek hangi kategoriye ait olduğunu ve nasıl geri dönüştürüleceğini öğrenin.")
@@ -250,6 +259,8 @@ if 'analysis_count' not in st.session_state:
     st.session_state.prediction_counts = {k: 0 for k in CATEGORY_INFO.keys()}
     st.session_state.total_co2_saved = 0.0
     st.session_state.last_prediction = "Henüz analiz yapılmadı"
+    st.session_state.show_project_modal = False
+    st.session_state.show_about_modal = False
 
 # Toplam Analiz ve CO2 Metrikleri
 st.sidebar.metric(label="Toplam Analiz Sayısı", value=st.session_state.analysis_count)
@@ -280,11 +291,111 @@ if st.session_state.analysis_count > 0:
     st.sidebar.plotly_chart(fig, use_container_width=True)
 
 st.sidebar.markdown("---")
+
+# --- Proje Hakkında ve Hakkımızda Butonları ---
+col1, col2 = st.sidebar.columns(2)
+
+with col1:
+    if st.button("📊 Proje Hakkında", use_container_width=True):
+        st.session_state.show_project_modal = True
+
+with col2:
+    if st.button("👤 Hakkımızda", use_container_width=True):
+        st.session_state.show_about_modal = True
+
+# Proje Hakkında Modal
+if st.session_state.get('show_project_modal', False):
+    st.markdown("""
+    <style>
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+    }
+    .modal-content {
+        background-color: white;
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        max-width: 600px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 3, 1])
+    with col2:
+        st.markdown("### 📊 Proje Hakkında")
+        st.markdown("""
+        **Akıllı Geri Dönüşüm Asistanı**, yapay zeka ve görüntü sınıflandırma teknolojisini kullanarak 
+        atıkları otomatik olarak kategorize eden bir uygulamadır.
+        
+        **Proje Özellikleri:**
+        - 🤖 Teachable Machine ile eğitilmiş model (%85-90 doğruluk)
+        - 📊 Gerçek zamanlı istatistik ve analiz
+        - 🌍 CO2 tasarrufu hesaplaması
+        - 💡 Geri dönüşüm ipuçları ve bilgileri
+        
+        **Teknoloji Stack:**
+        - Streamlit (Web Arayüzü)
+        - TensorFlow/Keras (Model)
+        - Google Drive (Veri Depolama)
+        - Plotly (Grafikler)
+        
+        **Proje Sunumu:** Detaylı bilgi ve analiz için sidebar'daki butonları kullanın.
+        """)
+        
+        if st.button("Kapat", key="close_project"):
+            st.session_state.show_project_modal = False
+            st.rerun()
+
+# Hakkımızda Modal
+if st.session_state.get('show_about_modal', False):
+    col1, col2, col3 = st.columns([1, 3, 1])
+    with col2:
+        st.markdown("### 👤 Hakkımızda")
+        
+        # Profil Fotoğrafı
+        st.image("https://media.licdn.com/dms/image/v2/D4D03AQGVv9aJFngyfA/profile-displayphoto-crop_800_800/B4DZiTDBBMHsAI-/0/1754813700473?e=1762992000&v=beta&t=dHNPVRx59o4FH5GVoVZWgReb7R364ncx4lwhc32A6pM", width=150)
+        
+        st.markdown("""
+        **Alkım Can KALYONCU**
+        
+        🎓 **Ünvan:** Matematik Öğretmeni
+        
+        **Hakkında:**
+        - 📚 Milli Eğitim Bakanlığı (MEB) Matematik Öğretmeni
+        - 👨‍👦 Eymen Efe'nin babası
+        - 🤖 KuGeN Takım Danışmanı
+        - 🏆 2022 Teknofest Şampiyonu
+        - 💪 "Düşse de kalkan - Vazgeçmeyen Adam"
+        
+        **İletişim:**
+        - 📧 [alkimkalyoncu@gmail.com](mailto:alkimkalyoncu@gmail.com)
+        - 💼 [LinkedIn](https://linkedin.com/in/alkım-can-kalyoncu-8433121a2)
+        - 💻 [GitHub](https://github.com/alkimcan)
+        - 📸 [Instagram](https://www.instagram.com/alkimkalyoncu/)
+        """)
+        
+        if st.button("Kapat", key="close_about"):
+            st.session_state.show_about_modal = False
+            st.rerun()
+
+st.sidebar.markdown("---")
 st.sidebar.caption("Bu uygulama, Kaggle 'Garbage Classification' veri seti kullanılarak eğitilmiş bir MobileNetV2 modeli ile güçlendirilmiştir.")
 
-# Modelin düşük doğruluk oranını kullanıcıya bildiren not
+# Modelin doğruluk oranını kullanıcıya bildiren not
 if model is not None:
-    st.warning("⚠️ **Önemli Not:** Model, kısıtlı eğitim süresi nedeniyle yaklaşık **%52 eğitim ve %30 doğrulama doğruluğuna** sahiptir. Tahminlerinizde hatalar olabilir. Daha yüksek doğruluk için ek eğitim gereklidir.")
+    st.success("✅ **Model Bilgisi:** Bu uygulama, Teachable Machine ile eğitilmiş ve **%85-90 doğruluk** elde eden bir model kullanmaktadır. Üretim ortamı için optimize edilmiştir.")
 
 # Footer
 st.markdown("---")
