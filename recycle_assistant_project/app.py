@@ -5,11 +5,13 @@ from tensorflow.keras.preprocessing import image
 import numpy as np
 from PIL import Image
 import os
+import gdown
 import plotly.express as px
 import pandas as pd
 
 # --- Sabitler ve Konfigürasyon ---
 MODEL_PATH = 'garbage_classifier_model.h5'
+DRIVE_FILE_ID = '1uB24DQqKSCzTKGSjBsyjc7IuBOiCy4pw'
 CLASS_NAMES_FILE = 'class_names.txt'
 IMG_SIZE = (224, 224)
 
@@ -73,7 +75,22 @@ CATEGORY_INFO = {
 
 # Model ve Sınıf İsimlerini Yükle
 @st.cache_resource
+def download_model():
+    if not os.path.exists(MODEL_PATH):
+        st.info("Model dosyası bulunamadı. Google Drive'dan indiriliyor...")
+        try:
+            gdown.download(id=DRIVE_FILE_ID, output=MODEL_PATH, quiet=False)
+            st.success("Model başarıyla indirildi!")
+        except Exception as e:
+            st.error(f"Model indirilirken hata oluştu: {e}")
+            return False
+    return True
+
+@st.cache_resource
 def load_assets():
+    if not download_model():
+        return None, None
+    
     try:
         model = load_model(MODEL_PATH)
         with open(CLASS_NAMES_FILE, 'r') as f:
