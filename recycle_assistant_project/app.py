@@ -10,10 +10,10 @@ import plotly.express as px
 import pandas as pd
 
 # --- Sabitler ve Konfigürasyon ---
-MODEL_PATH = 'garbage_classifier_model.h5'
-DRIVE_FILE_ID = '1uB24DQqKSCzTKGSjBsyjc7IuBOiCy4pw'
-CLASS_NAMES_DRIVE_ID = '1tL43bFPuXYmd4iQ2A8HZZTTq9mno1z1F'
-CLASS_NAMES_FILE = 'class_names.txt'
+MODEL_PATH = 'keras_model.h5'
+DRIVE_FILE_ID = '1tVDqgUYr5gn32_bhH644Ae0J9dra333J'
+CLASS_NAMES_DRIVE_ID = '1C_O8unajWo7qJGJE5VVxQJ4mcASbXYRN'
+CLASS_NAMES_FILE = 'labels.txt'
 IMG_SIZE = (224, 224)
 
 # Sınıflandırma sonuçları için detaylı bilgiler ve renkler
@@ -109,9 +109,12 @@ def load_assets():
     try:
         model = load_model(MODEL_PATH)
         with open(CLASS_NAMES_FILE, 'r') as f:
-            class_names = [line.strip() for line in f.readlines() if line.strip()]
+            # Teachable Machine labels.txt dosyasında "0 cardboard" gibi format olduğu için
+# sadece sınıf ismini alacak şekilde düzenliyoruz.
+class_names = [line.strip().split(' ', 1)[1] for line in f.readlines() if line.strip()]
         
-        class_map = ['trash', 'cardboard', 'trash', 'glass', 'metal', 'paper', 'plastic']
+        # Teachable Machine'den gelen class_names listesi zaten doğru sıradadır.
+class_map = class_names
         
         return model, class_map
     except Exception as e:
