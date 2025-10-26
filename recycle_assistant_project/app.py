@@ -83,7 +83,7 @@ def download_assets():
     if not os.path.exists(MODEL_PATH):
         st.info("Model dosyası bulunamadı. Google Drive'dan indiriliyor...")
         try:
-            gdown.download(id=DRIVE_FILE_ID, output=MODEL_PATH, quiet=False)
+            gdown.download(id=DRIVE_FILE_ID, output=MODEL_PATH, quiet=False, fuzzy=True)
             st.success("Model başarıyla indirildi!")
         except Exception as e:
             st.error(f"Model indirilirken hata oluştu: {e}")
@@ -93,7 +93,7 @@ def download_assets():
     if not os.path.exists(CLASS_NAMES_FILE):
         st.info("Sınıf isimleri dosyası bulunamadı. Google Drive'dan indiriliyor...")
         try:
-            gdown.download(id=CLASS_NAMES_DRIVE_ID, output=CLASS_NAMES_FILE, quiet=False)
+            gdown.download(id=CLASS_NAMES_DRIVE_ID, output=CLASS_NAMES_FILE, quiet=False, fuzzy=True)
             st.success("Sınıf isimleri dosyası başarıyla indirildi!")
         except Exception as e:
             st.error(f"Sınıf isimleri dosyası indirilirken hata oluştu: {e}")
