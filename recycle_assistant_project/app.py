@@ -10,10 +10,10 @@ import plotly.express as px
 import pandas as pd
 
 # --- Sabitler ve Konfigürasyon ---
-MODEL_PATH = 'keras_model.h5'
-DRIVE_FILE_ID = '1tVDqgUYr5gn32_bhH644Ae0J9dra333J'
-CLASS_NAMES_DRIVE_ID = '1C_O8unajWo7qJGJE5VVxQJ4mcASbXYRN'
-CLASS_NAMES_FILE = 'labels.txt'
+MODEL_PATH = 'garbage_classifier_model.h5'
+DRIVE_FILE_ID = '1uB24DQqKSCzTKGSjBsyjc7IuBOiCy4pw'
+CLASS_NAMES_DRIVE_ID = '1tL43bFPuXYmd4iQ2A8HZZTTq9mno1z1F'
+CLASS_NAMES_FILE = 'class_names.txt'
 IMG_SIZE = (224, 224)
 
 # Sınıflandırma sonuçları için detaylı bilgiler ve renkler
@@ -98,7 +98,7 @@ def download_assets():
         except Exception as e:
             st.error(f"Sınıf isimleri dosyası indirilirken hata oluştu: {e}")
             success = False
-            
+
     return success
 
 @st.cache_resource
@@ -121,33 +121,23 @@ def load_assets():
         st.error(f"Varlıklar yüklenirken bir hata oluştu: {e}")
         return None, None
 
-model, class_map = load_assets()
-
-# --- Görüntü İşleme Fonksiyonu ---
 def preprocess_image(img):
     img = img.resize(IMG_SIZE)
-    img_array = image.img_to_array(img)
+    img_array = np.array(img) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
-    img_array /= 255.0
     return img_array
 
-# --- Tahmin Fonksiyonu ---
 def predict_image(model, img_array, class_map):
     predictions = model.predict(img_array)
-    score = tf.nn.softmax(predictions[0])
-    predicted_index = np.argmax(score)
-    confidence = np.max(score)
-    predicted_class_key = class_map[predicted_index]
+    predicted_class_idx = np.argmax(predictions[0])
+    confidence = predictions[0][predicted_class_idx]
+    predicted_class_key = class_map[predicted_class_idx].lower()
     return predicted_class_key, confidence
 
-# --- Streamlit Arayüzü ---
-st.set_page_config(
-    page_title="🌱 Akıllı Geri Dönüşüm Asistanı",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# Modeli Yükle
+model, class_map = load_assets()
 
-# Custom CSS
+# CSS Stilleri
 st.markdown('''
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
@@ -190,6 +180,9 @@ html, body, [class*="st-"] {
     padding: 10px 20px;
     font-weight: 600;
 }
+.sidebar-button {
+    margin: 10px 0;
+}
 </style>
 ''', unsafe_allow_html=True)
 
@@ -198,35 +191,45 @@ if 'show_project_modal' not in st.session_state:
     st.session_state.show_project_modal = False
 if 'show_about_modal' not in st.session_state:
     st.session_state.show_about_modal = False
+if 'analysis_count' not in st.session_state:
+    st.session_state.analysis_count = 0
+    st.session_state.prediction_counts = {k: 0 for k in CATEGORY_INFO.keys()}
+    st.session_state.total_co2_saved = 0.0
+    st.session_state.last_prediction = "Henüz analiz yapılmadı"
 
 # Başlık
 st.title("🌱 Akıllı Geri Dönüşüm Asistanı")
 st.markdown("Yüklediğiniz atık görselini analiz ederek hangi kategoriye ait olduğunu ve nasıl geri dönüştürüleceğini öğrenin.")
 
-# --- Ana İçerik ve Yükleyici ---
-uploaded_file = st.file_uploader(
-    "Fotoğraf Yükle (PNG, JPG)",
-    type=["png", "jpg", "jpeg"],
-    help="Lütfen net ve tek bir atık içeren bir fotoğraf yükleyin."
-)
+# 3 Sütunlu Layout
+col_left, col_middle, col_right = st.columns([1.5, 1.5, 1.2])
 
-if uploaded_file is not None and model is not None:
-    try:
+# --- SOL SÜTUN: Görüntü Yükleme ---
+with col_left:
+    st.subheader("📸 Fotoğraf Yükle")
+    uploaded_file = st.file_uploader(
+        "Fotoğraf Yükle (PNG, JPG)",
+        type=["png", "jpg", "jpeg"],
+        help="Lütfen net ve tek bir atık içeren bir fotoğraf yükleyin."
+    )
+    
+    if uploaded_file is not None:
         image_pil = Image.open(uploaded_file).convert('RGB')
-        col1, col2 = st.columns([1, 2])
-        with col1:
-            st.image(image_pil, caption='Yüklenen Fotoğraf', use_column_width=True)
-        with col2:
+        st.image(image_pil, caption='Yüklenen Fotoğraf', use_column_width=True)
+
+# --- ORTA SÜTUN: Analiz Sonuçları ---
+with col_middle:
+    st.subheader("📊 Analiz Sonuçları")
+    
+    if uploaded_file is not None and model is not None:
+        try:
+            image_pil = Image.open(uploaded_file).convert('RGB')
             st.info("Analiz ediliyor...")
             img_array = preprocess_image(image_pil)
             predicted_class_key, confidence = predict_image(model, img_array, class_map)
             info = CATEGORY_INFO.get(predicted_class_key, CATEGORY_INFO['trash'])
             
-            # Session State'i burada, tahmin yapıldıktan hemen sonra güncelle
-            if 'analysis_count' not in st.session_state:
-                st.session_state.analysis_count = 0
-                st.session_state.prediction_counts = {k: 0 for k in CATEGORY_INFO.keys()}
-                st.session_state.total_co2_saved = 0.0
+            # Session State'i güncelle
             st.session_state.analysis_count += 1
             st.session_state.prediction_counts[predicted_class_key] += 1
             st.session_state.total_co2_saved += info.get('co2_saving', 0.0)
@@ -246,21 +249,107 @@ if uploaded_file is not None and model is not None:
                     <p>🌍 Tahmini Çevresel Katkı: <b>{info['co2_saving']:.2f} kg CO2 tasarrufu</b></p>
                 </div>
             ''', unsafe_allow_html=True)
+            
+        except Exception as e:
+            st.error(f"Analiz sırasında bir hata oluştu: {e}")
+    else:
+        st.info("Lütfen sol taraftan bir fotoğraf yükleyin.")
 
-    except Exception as e:
-        st.error(f"Analiz sırasında bir hata oluştu: {e}")
+# --- SAĞ SÜTUN: Butonlar ve İstatistikler ---
+with col_right:
+    st.subheader("⚙️ Menü")
+    
+    # Hakkımızda Butonu
+    if st.button("👤 Hakkımızda", use_container_width=True, key="about_btn"):
+        if st.session_state.show_about_modal:
+            st.session_state.show_about_modal = False
+        else:
+            st.session_state.show_about_modal = True
+            st.session_state.show_project_modal = False
+    
+    st.markdown("")  # Boşluk
+    
+    # Proje Hakkında Butonu
+    if st.button("📊 Proje Hakkında", use_container_width=True, key="project_btn"):
+        if st.session_state.show_project_modal:
+            st.session_state.show_project_modal = False
+        else:
+            st.session_state.show_project_modal = True
+            st.session_state.show_about_modal = False
+
+# --- MODAL İÇERİKLERİ ---
+
+# Hakkımızda Modal
+if st.session_state.show_about_modal:
+    st.markdown("---")
+    st.markdown("### 👤 Hakkımızda")
+    
+    # Profil Fotoğrafı
+    col1, col2, col3 = st.columns([0.5, 1, 0.5])
+    with col2:
+        st.image("https://media.licdn.com/dms/image/v2/D4D03AQGVv9aJFngyfA/profile-displayphoto-crop_800_800/B4DZiTDBBMHsAI-/0/1754813700473?e=1762992000&v=beta&t=dHNPVRx59o4FH5GVoVZWgReb7R364ncx4lwhc32A6pM", width=150)
+    
+    st.markdown("""
+    **Alkım Can KALYONCU**
+    
+    🎓 **Ünvan:** Matematik Öğretmeni
+    
+    **Hakkında:**
+    - 📚 Milli Eğitim Bakanlığı (MEB) Matematik Öğretmeni
+    - 👨‍👦 Eymen Efe'nin babası
+    - 🤖 KuGeN Takım Danışmanı
+    - 🏆 2022 Teknofest Şampiyonu
+    - 💪 "Düşse de kalkan - Vazgeçmeyen Adam"
+    
+    **İletişim:**
+    - 📧 [alkimkalyoncu@gmail.com](mailto:alkimkalyoncu@gmail.com)
+    - 💼 [LinkedIn](https://linkedin.com/in/alkım-can-kalyoncu-8433121a2)
+    - 💻 [GitHub](https://github.com/alkimcan)
+    - 📸 [Instagram](https://www.instagram.com/alkimkalyoncu/)
+    
+    ---
+    
+    **🌟 Biyografi**
+    
+    1980'lerin sonunda doğan, 2000'lerin başında "bu çocuk matematiği çözdü" etiketiyle büyüyen Alkım Can Kalyoncu, kendini sadece rakamların değil, fikirlerin ve hayallerin de ustası olarak kanıtladı. 📚✏️
+    
+    Matematik öğretmeni olarak başladığı yolculuğunu, gençlerin sadece dört işlem değil; robotik, yapay zekâ, 3D tasarım ve hayallerle tanışabileceği atölyelere dönüştürdü. 🚀 KuGeN Maker Teknoloji ve Akademik Danışmanlık Merkezi ile Boyabat'ın kalbine küçük bir "gelecek fabrikası" kurdu. Burada öğrenciler sadece sınava değil, geleceğe hazırlanıyor.
+    
+    Ama Alkım'ı sadece ders anlatan biri sanmayın. 🎭 O, bir yandan Sinop'un 1214'teki fethini kısa filmlere konu eden; Refik Anadol esintileriyle "makine rüyaları" tasarlayan; öte yandan Instagram'da kitaplarıyla #okudumbitti paylaşımları yaparak "modern zaman hikâye anlatıcısı"na dönüşen bir karakter.
+    
+    Kendi tabiriyle:
+    
+    **"Ben sadece bir öğretmen değilim; aynı zamanda hayallerini projeye, projelerini esere, eserlerini de gençlerin hayatına işleyen bir yol arkadaşıyım."** 🌌
+    
+    Bugünlerde hedefi; hem matematikte hem teknolojide hem de hayatta gençlere "yapabilirsin" dedirtmek. Ve elbette, biraz da kendi hayatını baştan yazmak. ✨
+    """)
+
+# Proje Hakkında Modal
+if st.session_state.show_project_modal:
+    st.markdown("---")
+    st.markdown("### 📊 Proje Hakkında")
+    
+    st.markdown("""
+    **Akıllı Geri Dönüşüm Asistanı**, yapay zeka ve görüntü sınıflandırma teknolojisini kullanarak 
+    atıkları otomatik olarak kategorize eden bir uygulamadır.
+    
+    **Proje Özellikleri:**
+    - 🤖 Teachable Machine ile eğitilmiş model (%85-90 doğruluk)
+    - 📊 Gerçek zamanlı istatistik ve analiz
+    - 🌍 CO2 tasarrufu hesaplaması
+    - 💡 Geri dönüşüm ipuçları ve bilgileri
+    
+    **Teknoloji Stack:**
+    - Streamlit (Web Arayüzü)
+    - TensorFlow/Keras (Model)
+    - Google Drive (Veri Depolama)
+    - Plotly (Grafikler)
+    
+    **Proje Sunumu:** Detaylı bilgi ve analiz için sidebar'daki butonları kullanın.
+    """)
 
 # --- Sidebar ve İstatistikler ---
 st.sidebar.header("📊 Analiz İstatistikleri")
-
-# Session State Başlatma (Eğer henüz analiz yapılmadıysa)
-if 'analysis_count' not in st.session_state:
-    st.session_state.analysis_count = 0
-    st.session_state.prediction_counts = {k: 0 for k in CATEGORY_INFO.keys()}
-    st.session_state.total_co2_saved = 0.0
-    st.session_state.last_prediction = "Henüz analiz yapılmadı"
-    st.session_state.show_project_modal = False
-    st.session_state.show_about_modal = False
 
 # Toplam Analiz ve CO2 Metrikleri
 st.sidebar.metric(label="Toplam Analiz Sayısı", value=st.session_state.analysis_count)
@@ -291,107 +380,7 @@ if st.session_state.analysis_count > 0:
     st.sidebar.plotly_chart(fig, use_container_width=True)
 
 st.sidebar.markdown("---")
-
-# --- Proje Hakkında ve Hakkımızda Butonları ---
-col1, col2 = st.sidebar.columns(2)
-
-with col1:
-    if st.button("📊 Proje Hakkında", use_container_width=True):
-        st.session_state.show_project_modal = True
-
-with col2:
-    if st.button("👤 Hakkımızda", use_container_width=True):
-        st.session_state.show_about_modal = True
-
-# Proje Hakkında Modal
-if st.session_state.get('show_project_modal', False):
-    st.markdown("""
-    <style>
-    .modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-    }
-    .modal-content {
-        background-color: white;
-        padding: 30px;
-        border-radius: 15px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-        max-width: 600px;
-        width: 90%;
-        max-height: 80vh;
-        overflow-y: auto;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns([1, 3, 1])
-    with col2:
-        st.markdown("### 📊 Proje Hakkında")
-        st.markdown("""
-        **Akıllı Geri Dönüşüm Asistanı**, yapay zeka ve görüntü sınıflandırma teknolojisini kullanarak 
-        atıkları otomatik olarak kategorize eden bir uygulamadır.
-        
-        **Proje Özellikleri:**
-        - 🤖 Teachable Machine ile eğitilmiş model (%85-90 doğruluk)
-        - 📊 Gerçek zamanlı istatistik ve analiz
-        - 🌍 CO2 tasarrufu hesaplaması
-        - 💡 Geri dönüşüm ipuçları ve bilgileri
-        
-        **Teknoloji Stack:**
-        - Streamlit (Web Arayüzü)
-        - TensorFlow/Keras (Model)
-        - Google Drive (Veri Depolama)
-        - Plotly (Grafikler)
-        
-        **Proje Sunumu:** Detaylı bilgi ve analiz için sidebar'daki butonları kullanın.
-        """)
-        
-        if st.button("Kapat", key="close_project"):
-            st.session_state.show_project_modal = False
-            st.rerun()
-
-# Hakkımızda Modal
-if st.session_state.get('show_about_modal', False):
-    col1, col2, col3 = st.columns([1, 3, 1])
-    with col2:
-        st.markdown("### 👤 Hakkımızda")
-        
-        # Profil Fotoğrafı
-        st.image("https://media.licdn.com/dms/image/v2/D4D03AQGVv9aJFngyfA/profile-displayphoto-crop_800_800/B4DZiTDBBMHsAI-/0/1754813700473?e=1762992000&v=beta&t=dHNPVRx59o4FH5GVoVZWgReb7R364ncx4lwhc32A6pM", width=150)
-        
-        st.markdown("""
-        **Alkım Can KALYONCU**
-        
-        🎓 **Ünvan:** Matematik Öğretmeni
-        
-        **Hakkında:**
-        - 📚 Milli Eğitim Bakanlığı (MEB) Matematik Öğretmeni
-        - 👨‍👦 Eymen Efe'nin babası
-        - 🤖 KuGeN Takım Danışmanı
-        - 🏆 2022 Teknofest Şampiyonu
-        - 💪 "Düşse de kalkan - Vazgeçmeyen Adam"
-        
-        **İletişim:**
-        - 📧 [alkimkalyoncu@gmail.com](mailto:alkimkalyoncu@gmail.com)
-        - 💼 [LinkedIn](https://linkedin.com/in/alkım-can-kalyoncu-8433121a2)
-        - 💻 [GitHub](https://github.com/alkimcan)
-        - 📸 [Instagram](https://www.instagram.com/alkimkalyoncu/)
-        """)
-        
-        if st.button("Kapat", key="close_about"):
-            st.session_state.show_about_modal = False
-            st.rerun()
-
-st.sidebar.markdown("---")
-st.sidebar.caption("Bu uygulama, Kaggle 'Garbage Classification' veri seti kullanılarak eğitilmiş bir MobileNetV2 modeli ile güçlendirilmiştir.")
+st.sidebar.caption("Bu uygulama, Kaggle 'Garbage Classification' veri seti kullanılarak eğitilmiş bir model ile güçlendirilmiştir.")
 
 # Modelin doğruluk oranını kullanıcıya bildiren not
 if model is not None:
@@ -400,3 +389,4 @@ if model is not None:
 # Footer
 st.markdown("---")
 st.markdown("Geliştirme aşaması: **İyileştirme ve Test**")
+
