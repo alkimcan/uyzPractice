@@ -110,11 +110,11 @@ def load_assets():
         model = load_model(MODEL_PATH)
         with open(CLASS_NAMES_FILE, 'r') as f:
             # Teachable Machine labels.txt dosyasında "0 cardboard" gibi format olduğu için
-# sadece sınıf ismini alacak şekilde düzenliyoruz.
-class_names = [line.strip().split(' ', 1)[1] for line in f.readlines() if line.strip()]
+            # sadece sınıf ismini alacak şekilde düzenliyoruz.
+            class_names = [line.strip().split(' ', 1)[1] for line in f.readlines() if line.strip()]
         
         # Teachable Machine'den gelen class_names listesi zaten doğru sıradadır.
-class_map = class_names
+        class_map = class_names
         
         return model, class_map
     except Exception as e:
