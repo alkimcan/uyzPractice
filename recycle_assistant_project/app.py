@@ -32,19 +32,20 @@ st.markdown('''
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
 * { font-family: 'Poppins', sans-serif; }
 .stApp { background: linear-gradient(135deg, #f0f2f6 0%, #e0e4eb 100%); }
-.main-header { text-align: center; color: #264653; font-weight: 700; margin-bottom: 15px; }
-.column { padding: 15px; background: white; border-radius: 15px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
-.stats-box { background: linear-gradient(135deg, #f0f2f6 0%, #e0e4eb 100%); padding: 10px; border-radius: 10px; margin: 6px 0; border-left: 4px solid #2a9d8f; }
-.stats-label { font-size: 10px; color: #666; font-weight: 600; text-transform: uppercase; }
-.stats-value { font-size: 16px; font-weight: 700; color: #264653; margin-top: 2px; }
-.result-card { padding: 15px; border-radius: 15px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); color: white; }
-.result-card h3, .result-card h4 { color: white; font-weight: 600; margin: 8px 0; font-size: 16px; }
-.result-card p { margin: 5px 0; font-size: 14px; }
-.stButton>button { width: 100%; padding: 10px; margin: 5px 0; border-radius: 10px; font-weight: 600; border: none; }
+.main-header { text-align: center; color: #264653; font-weight: 700; margin: 0; font-size: 32px; }
+.section-header { color: #264653; font-weight: 700; font-size: 18px; margin-top: 0; }
+.stats-box { background: white; padding: 12px; border-radius: 10px; margin: 8px 0; border-left: 4px solid #2a9d8f; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); }
+.stats-label { font-size: 11px; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.stats-value { font-size: 18px; font-weight: 700; color: #264653; margin-top: 4px; }
+.result-card { padding: 20px; border-radius: 15px; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2); color: white; }
+.result-card h3, .result-card h4 { color: white; font-weight: 600; margin: 10px 0; font-size: 16px; }
+.result-card p { margin: 6px 0; font-size: 14px; }
+.stButton>button { width: 100%; padding: 10px; margin: 5px 0; border-radius: 10px; font-weight: 600; border: none; font-size: 14px; }
 .log-item { padding: 8px; margin: 4px 0; border-radius: 6px; font-size: 12px; }
 .log-success { background: #d4edda; color: #155724; border-left: 3px solid #28a745; }
 .log-error { background: #f8d7da; color: #721c24; border-left: 3px solid #f5c6cb; }
 .log-info { background: #d1ecf1; color: #0c5460; border-left: 3px solid #bee5eb; }
+.sidebar-section { background: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); }
 </style>
 ''', unsafe_allow_html=True)
 
@@ -111,9 +112,6 @@ def predict_image(model, img_array, class_map):
     predicted_class_key = class_map[predicted_class_idx].lower()
     return predicted_class_key, confidence
 
-# Başlık
-st.markdown("<h1 class='main-header'>🌱 Akıllı Geri Dönüşüm Asistanı</h1>", unsafe_allow_html=True)
-
 # Model Yükleme
 if st.session_state.model is None:
     st.session_state.model, st.session_state.class_map = load_assets()
@@ -125,13 +123,9 @@ if st.session_state.model is None:
 model = st.session_state.model
 class_map = st.session_state.class_map
 
-# Ana Layout: 3 Sütun
-col_left, col_middle, col_right = st.columns([1.2, 1.2, 1], gap="medium")
-
-# --- SOL SÜTUN ---
-with col_left:
-    # Butonlar (Üstte)
-    st.subheader("⚙️ Menü")
+# --- SIDEBAR (Sol) ---
+with st.sidebar:
+    st.markdown("### ⚙️ Menü")
     
     if st.button("👤 Hakkımızda", key="about_btn", use_container_width=True):
         st.session_state.show_about_modal = not st.session_state.show_about_modal
@@ -143,8 +137,9 @@ with col_left:
         st.session_state.show_about_modal = False
         st.rerun()
     
-    # Sistem Günlüğü
     st.markdown("---")
+    
+    # Sistem Günlüğü
     with st.expander("📋 Sistem Günlüğü", expanded=False):
         if st.session_state.logs:
             for log in reversed(st.session_state.logs[-20:]):
@@ -156,10 +151,72 @@ with col_left:
                     st.markdown(f"<div class='log-item log-info'>ℹ️ {log['message']}</div>", unsafe_allow_html=True)
         else:
             st.info("Henüz bir işlem yapılmadı.")
+
+# --- ORTA ALAN ---
+st.markdown("<h1 class='main-header'>🌱 Akıllı Geri Dönüşüm Asistanı</h1>", unsafe_allow_html=True)
+
+col_center, col_right = st.columns([1.5, 1], gap="medium")
+
+# --- ORTA SÜTUN (Fotoğraf ve Analiz) ---
+with col_center:
+    col_upload, col_analysis = st.columns(2, gap="small")
     
-    # İstatistikler
-    st.markdown("---")
-    st.subheader("📊 İstatistikler")
+    with col_upload:
+        st.markdown("### 📸 Fotoğraf Yükle")
+        st.markdown("**Fotoğraf Yükle (PNG, JPG)**")
+        uploaded_file = st.file_uploader("", type=["png", "jpg", "jpeg"], key="file_uploader", label_visibility="collapsed")
+        
+        st.markdown("Drag and drop file here")
+        st.markdown("Limit 200MB per f...")
+        st.button("Browse files", disabled=True, use_container_width=True)
+        
+        if uploaded_file is not None:
+            try:
+                image_pil = Image.open(uploaded_file).convert('RGB')
+                st.image(image_pil, caption='Yüklenen Fotoğraf', use_column_width=True)
+                add_log(f"Fotoğraf yüklendi: {uploaded_file.name}", "success")
+            except Exception as e:
+                add_log(f"Fotoğraf yükleme hatası: {str(e)}", "error")
+    
+    with col_analysis:
+        st.markdown("### 📊 Analiz Sonuçları")
+        
+        if uploaded_file is not None and model is not None and class_map is not None:
+            try:
+                image_pil = Image.open(uploaded_file).convert('RGB')
+                img_array = preprocess_image(image_pil)
+                predicted_class_key, confidence = predict_image(model, img_array, class_map)
+                info = CATEGORY_INFO.get(predicted_class_key, CATEGORY_INFO['trash'])
+                
+                st.session_state.analysis_count += 1
+                st.session_state.prediction_counts[predicted_class_key] += 1
+                st.session_state.total_co2_saved += info.get('co2_saving', 0.0)
+                st.session_state.last_prediction = info['name']
+                add_log(f"Analiz: {info['name']} (%{confidence*100:.1f})", "success")
+
+                st.markdown(f'''
+                    <div class="result-card" style="background-color: {info['color']};">
+                        <h3>🎯 TESPİT: {info['icon']} {info['name'].upper()}</h3>
+                        <p>📊 Güven: <b>{confidence*100:.1f}%</b></p>
+                        <hr style="border-color: white; opacity: 0.5;">
+                        <h4>📦 GERİ DÖNÜŞÜM</h4>
+                        <p><b>Kutu:</b> {info['bin']}</p>
+                        <p><b>Durum:</b> {'✅ GERİ DÖNÜŞTÜRÜLEBİLİR' if info['recyclable'] else '❌ GERİ DÖNÜŞTÜRÜLEMEZ'}</p>
+                        <p><b>💡 İpucu:</b> {info['tip']}</p>
+                        <hr style="border-color: white; opacity: 0.5;">
+                        <p>🌍 CO2 Tasarrufu: <b>{info['co2_saving']:.2f} kg</b></p>
+                    </div>
+                ''', unsafe_allow_html=True)
+                
+            except Exception as e:
+                add_log(f"Analiz hatası: {str(e)}", "error")
+                st.error(f"Analiz sırasında bir hata oluştu")
+        else:
+            st.info("📸 Lütfen sol taraftan bir fotoğraf yükleyin.")
+
+# --- SAĞ SÜTUN (İstatistikler) ---
+with col_right:
+    st.markdown("### 📊 İstatistikler")
     
     st.markdown(f"""
     <div class="stats-box">
@@ -178,13 +235,14 @@ with col_left:
     st.markdown(f"""
     <div class="stats-box">
         <div class="stats-label">Son Tahmin</div>
-        <div class="stats-value">{st.session_state.last_prediction}</div>
+        <div class="stats-value" style="font-size: 14px;">{st.session_state.last_prediction}</div>
     </div>
     """, unsafe_allow_html=True)
     
+    st.markdown("**Kategori Dağılımı**")
+    
     # Kategori Dağılımı
     if st.session_state.analysis_count > 0:
-        st.markdown("**Kategori Dağılımı**")
         plot_data = {
             "Kategori": [CATEGORY_INFO[k]['name'] for k, v in st.session_state.prediction_counts.items() if v > 0],
             "Sayı": [v for v in st.session_state.prediction_counts.values() if v > 0],
@@ -194,62 +252,15 @@ with col_left:
             df = pd.DataFrame(plot_data)
             fig = px.pie(df, values='Sayı', names='Kategori', color='Kategori',
                         color_discrete_map={k: v for k, v in zip(df['Kategori'], df['Renk'])}, hole=.3)
-            fig.update_traces(textposition='inside', textinfo='percent+label')
-            fig.update_layout(showlegend=False, margin=dict(t=0, b=0, l=0, r=0), height=250)
+            fig.update_traces(textposition='inside', textinfo='percent+label', textfont=dict(size=10))
+            fig.update_layout(showlegend=False, margin=dict(t=0, b=0, l=0, r=0), height=200)
             st.plotly_chart(fig, use_container_width=True)
-
-# --- ORTA SÜTUN ---
-with col_middle:
-    st.subheader("📸 Fotoğraf Yükle")
-    uploaded_file = st.file_uploader("Fotoğraf Yükle (PNG, JPG)", type=["png", "jpg", "jpeg"], key="file_uploader")
-    
-    if uploaded_file is not None:
-        try:
-            image_pil = Image.open(uploaded_file).convert('RGB')
-            st.image(image_pil, caption='Yüklenen Fotoğraf', use_column_width=True)
-            add_log(f"Fotoğraf yüklendi: {uploaded_file.name}", "success")
-        except Exception as e:
-            add_log(f"Fotoğraf yükleme hatası: {str(e)}", "error")
-    
-    st.markdown("---")
-    st.subheader("📊 Analiz Sonuçları")
-    
-    if uploaded_file is not None and model is not None and class_map is not None:
-        try:
-            image_pil = Image.open(uploaded_file).convert('RGB')
-            img_array = preprocess_image(image_pil)
-            predicted_class_key, confidence = predict_image(model, img_array, class_map)
-            info = CATEGORY_INFO.get(predicted_class_key, CATEGORY_INFO['trash'])
-            
-            st.session_state.analysis_count += 1
-            st.session_state.prediction_counts[predicted_class_key] += 1
-            st.session_state.total_co2_saved += info.get('co2_saving', 0.0)
-            st.session_state.last_prediction = info['name']
-            add_log(f"Analiz: {info['name']} (%{confidence*100:.1f})", "success")
-
-            st.markdown(f'''
-                <div class="result-card" style="background-color: {info['color']};">
-                    <h3>🎯 TESPİT: {info['icon']} {info['name'].upper()}</h3>
-                    <p>📊 Güven: <b>{confidence*100:.1f}%</b></p>
-                    <hr style="border-color: white; opacity: 0.5;">
-                    <h4>📦 GERİ DÖNÜŞÜM</h4>
-                    <p><b>Kutu:</b> {info['bin']}</p>
-                    <p><b>Durum:</b> {'✅ GERİ DÖNÜŞTÜRÜLEBİLİR' if info['recyclable'] else '❌ GERİ DÖNÜŞTÜRÜLEMEZ'}</p>
-                    <p><b>💡 İpucu:</b> {info['tip']}</p>
-                    <hr style="border-color: white; opacity: 0.5;">
-                    <p>🌍 CO2 Tasarrufu: <b>{info['co2_saving']:.2f} kg</b></p>
-                </div>
-            ''', unsafe_allow_html=True)
-            
-        except Exception as e:
-            add_log(f"Analiz hatası: {str(e)}", "error")
-            st.error(f"Analiz sırasında bir hata oluştu")
     else:
-        st.info("📸 Lütfen sol taraftan bir fotoğraf yükleyin.")
+        st.info("Henüz analiz yapılmadı")
 
-# --- SAĞ SÜTUN (Boş) ---
-with col_right:
-    st.write("")
+# --- FOOTER ---
+st.markdown("---")
+st.markdown("✅ **Model:** Teachable Machine ile eğitilmiş, %85-90 doğruluk oranına sahip model")
 
 # --- MODAL İÇERİKLERİ ---
 
@@ -322,7 +333,4 @@ if st.session_state.show_project_modal:
         st.rerun()
     
     st.markdown("</div></div>", unsafe_allow_html=True)
-
-st.markdown("---")
-st.markdown("✅ **Model:** Teachable Machine ile eğitilmiş, %85-90 doğruluk oranına sahip model")
 
