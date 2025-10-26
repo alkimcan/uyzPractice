@@ -1,0 +1,7 @@
+Garbage classification
+cardboard
+garbage classification
+glass
+metal
+paper
+plastic
