@@ -12,6 +12,7 @@ import pandas as pd
 # --- Sabitler ve Konfigürasyon ---
 MODEL_PATH = 'garbage_classifier_model.h5'
 DRIVE_FILE_ID = '1uB24DQqKSCzTKGSjBsyjc7IuBOiCy4pw'
+CLASS_NAMES_DRIVE_ID = '1tL43bFPuXYmd4iQ2A8HZZTTq9mno1z1F'
 CLASS_NAMES_FILE = 'class_names.txt'
 IMG_SIZE = (224, 224)
 
@@ -75,7 +76,10 @@ CATEGORY_INFO = {
 
 # Model ve Sınıf İsimlerini Yükle
 @st.cache_resource
-def download_model():
+def download_assets():
+    success = True
+    
+    # Model Dosyasını İndir
     if not os.path.exists(MODEL_PATH):
         st.info("Model dosyası bulunamadı. Google Drive'dan indiriliyor...")
         try:
@@ -83,12 +87,23 @@ def download_model():
             st.success("Model başarıyla indirildi!")
         except Exception as e:
             st.error(f"Model indirilirken hata oluştu: {e}")
-            return False
-    return True
+            success = False
+
+    # Sınıf İsimleri Dosyasını İndir
+    if not os.path.exists(CLASS_NAMES_FILE):
+        st.info("Sınıf isimleri dosyası bulunamadı. Google Drive'dan indiriliyor...")
+        try:
+            gdown.download(id=CLASS_NAMES_DRIVE_ID, output=CLASS_NAMES_FILE, quiet=False)
+            st.success("Sınıf isimleri dosyası başarıyla indirildi!")
+        except Exception as e:
+            st.error(f"Sınıf isimleri dosyası indirilirken hata oluştu: {e}")
+            success = False
+            
+    return success
 
 @st.cache_resource
 def load_assets():
-    if not download_model():
+    if not download_assets():
         return None, None
     
     try:
